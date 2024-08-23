@@ -198,7 +198,7 @@ async function confirmOrder(email, firstName, lastName, address, apartmentSuite,
         ${ordered && ordered.length > 0 ? ordered.map(item => `
           <tr>
             <td>${item.shoeName}</td>
-            <td><img src="http://localhost:5000/images/${item.shoeImage}" alt="${item.shoeName}" width="100"></td>
+            <td><img src=${item.shoeImage} alt="${item.shoeName}" width="100"></td>
             <td>${item.shoeSize}</td>
             <td>$${item.shoePrice}</td>
           </tr>
