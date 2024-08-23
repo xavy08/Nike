@@ -12,6 +12,7 @@
     "dotenv": "^16.4.5",
     "email-validator": "^2.0.4",
     "express": "~4.16.1",
+    "firebase": "^10.13.0",
     "mongodb": "^6.8.0",
     "mongoose": "^8.5.3",
     "morgan": "~1.9.1",
