@@ -4,6 +4,9 @@ const Product = require('./product')
 const Orders = require('./order')
 const path = require('path')
 const multer = require('multer');
+const { initializeApp } = require('firebase/app');
+const { getStorage, ref, uploadBytes, getDownloadURL } = require('firebase/storage');
+
 const nodemailer = require('nodemailer');
 var validator = require("email-validator");
 
@@ -11,35 +14,51 @@ router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' });
 });
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, '..', 'public', 'images')
-    cb(null, uploadPath)
-  },
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname)
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    const filename = file.fieldname + '-' + uniqueSuffix + ext
-    cb(null, filename)
-  }
-})
+// Firebase setup
+const { FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_PROJECT_ID, FIREBASE_STORAGE_BUCKET, FIREBASE_MESSAGING_SENDER_ID, FIREBASE_APP_ID} =
+  process.env;
 
-const upload = multer({ storage: storage })
+const firebaseConfig = {
+  apiKey: FIREBASE_API_KEY,
+  authDomain: FIREBASE_AUTH_DOMAIN,
+  projectId: FIREBASE_PROJECT_ID,
+  storageBucket: FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: FIREBASE_MESSAGING_SENDER_ID,
+  appId: FIREBASE_APP_ID,
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const storage = getStorage(firebaseApp);
+
+// Multer setup
+const multerStorage = multer.memoryStorage();
+const upload = multer({ storage: multerStorage });
 
 router.post('/addproduct', upload.single('shoeImage'), async function (req, res) {
   try {
     const { shoeName, shoePrice, shoeCategory, shoeDescription, shoeColor, shoeType, shoeSize } = req.body;
     
-    let imagePath = null;
+    let imageUrl = null;
     if (req.file) {
-      imagePath = `/images/${req.file.filename}`;
+      const dateTime = Date.now();
+      const fileName = `shoes/${dateTime}-${req.file.originalname}`;
+      const storageRef = ref(storage, fileName);
+      const metadata = {
+        contentType: req.file.mimetype,
+      };
+      
+      // Upload the file to Firebase Storage
+      await uploadBytes(storageRef, req.file.buffer, metadata);
+      
+      // Get the public URL of the uploaded file
+      imageUrl = await getDownloadURL(storageRef);
     }
+
     const product = new Product({
       shoeName,
       shoePrice,
       shoeCategory,
       shoeDescription,
-      shoeImage: imagePath,
+      shoeImage: imageUrl,
       shoeColor,
       shoeType,
       shoeSize
@@ -53,6 +72,7 @@ router.post('/addproduct', upload.single('shoeImage'), async function (req, res)
     res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 });
+
 
 router.get('/allproducts', (req, res) => {
   Product.find()
